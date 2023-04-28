@@ -1,20 +1,21 @@
 /*
- * Sm@rt ventilation v.: 1.0.0.0 b
+ * Sm@rt ventilation v.: 1.0.1.0 b
  * Автоматическое управление вентилятором вытяжного шкафа
- * Реле срабатыват при получении сигнала от датчиков движения или при принудительном включении тумблером или по таймауту
+ * Реле срабатыват при получении сигнала от датчиков движения или при принудительном включении тумблером или по таймеру
  * используется Low Level Trigger relay: HIGH - выключить, LOW - включить
- * Sm@rtDevice 03.01.2023
+ * питание плпаты через +5 V от внешнего блока питания (через Vin не работает реле)
+ * Sm@rtDevice 27.04.2023
 */
 
-#define DI_PIN_MOVE_DETECTOR_1 10            // пин, к которому подключен датчик движения 1 D10 Собака
-#define DI_PIN_MOVE_DETECTOR_2 11            // пин, к которому подключен датчик движения 2 D11 Кошка
+#define DI_PIN_MOVE_DETECTOR_1 10            // пин, к которому подключен датчик движения 1 D10 Кошка
+#define DI_PIN_MOVE_DETECTOR_2 11            // пин, к которому подключен датчик движения 2 D11 Собака (D10 и D11 можно объединить через 2 диода по сигнальной линии)
 #define DI_PIN_FAN_TUMBLER 9                 // пин, к которому подключен тумблер для принудительного включения вентилятора; схема подключения: DI_PIN_FAN_TUMBLER --> КНОПКА --> GND, используется внутренний PULL_UP резистор
 #define DO_PIN_FAN_RELAY 13                  // пин, выход на реле вентилятора D13
 
-#define TIME_OUT_FAN_OFF 60000               // таймаут отключения вентилятора после пропадания сигнала с датчика движения (мс.), def: 60000
+#define TIME_OUT_FAN_OFF 60000*5             // таймаут отключения вентилятора после пропадания сигнала с датчика движения или после срабатывания таймера (мс.), def: 60000*5 = 5 мин
 #define TIME_OUT_FAN_IDLE 60000*60           // таймаут простоя вентилятора (мс.), def: 60000*60 = 1 час
 
-#define DEBUG_MODE
+//#define DEBUG_MODE                           // отключить на проде
 
 #include "VirtualButton.h"
 VButton fan_tumbler;                         // тумблер принудительного включения вентилятора
@@ -66,16 +67,23 @@ void loop() {
   Serial.print("Move detector 2: "); Serial.println(digitalRead(DI_PIN_MOVE_DETECTOR_2));
 
   if (digitalRead(DI_PIN_MOVE_DETECTOR_1) == HIGH) {
-   Serial.println("Move 1 detected");
+   Serial.println("Move 1 (Cat) detected");
   }
 
   if (digitalRead(DI_PIN_MOVE_DETECTOR_2) == HIGH) {
-   Serial.println("Move 2 detected");
+   Serial.println("Move 2 (Dog) detected");
   }
 
   if (fan_on) {
    Serial.println("Fan is working...");
+   Serial.print("Time to switch off (s): ");
+   Serial.println((TIME_OUT_FAN_OFF - (just_now - fan_work_timer)) / 1000);
+  }else {
+   Serial.print("Time to switch on by timer (s): ");
+   Serial.println((TIME_OUT_FAN_IDLE - (just_now - fan_work_timer)) / 1000);
   }
+
+  Serial.println("===================\n");
 
   delay(1000);
 #endif
